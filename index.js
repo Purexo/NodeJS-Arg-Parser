@@ -99,7 +99,7 @@ class CommandsDefinition {
         return {isOption, isShort, isArgument};
     }
 
-    _getArgName(arg, isOption) {
+    _getOptionName(arg, isOption) {
         return arg.slice(isOption ? 2 : 1)
     }
 
@@ -130,7 +130,7 @@ class CommandsDefinition {
             const options = isOption ? this.options : this.shorts;
 
             if (!isArgument) {
-                const argname = this._getArgName(arg, isOption);
+                const argname = this._getOptionName(arg, isOption);
 
                 if (!this.options.has(argname))
                     throw new Error(`option: '${arg}, ${argname}' is not supported`);
