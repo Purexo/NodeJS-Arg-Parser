@@ -93,7 +93,7 @@ class CommandsDefinition {
 
     _stateArg(arg) {
         const isOption = arg.startsWith('--');
-        const isShort = arg.startsWith('-');
+        const isShort = !isOption && arg.startsWith('-');
         const isArgument = !(isOption || isShort);
 
         return {isOption, isShort, isArgument};
