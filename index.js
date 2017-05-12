@@ -27,10 +27,11 @@ class CommandsDefinition {
         return description;
     }
 
-    constructor(priorname=process.argv[1], {name=process.argv[1], description, example}={}) {
+    constructor(priorname=process.argv[1], {name=process.argv[1], description, example, examples=[]}={}) {
         this.name = priorname || name;
         this.description = description;
         this.example = example;
+        this.examples = examples;
 
         this.arguments = new Map();
 
@@ -73,7 +74,8 @@ class CommandsDefinition {
 
         usage += '\n\nExamples :\n';
         usage += `  ${this.example || 'No Example Provided'}`;
-        
+        usage += this.examples.reduce((prev, example) => prev + '\n  ' + example, usage);
+
         return usage;
     }
 
