@@ -2,8 +2,6 @@ function throwNotOptional(param) {
     throw new Error(`param: ${param} is not optional`)
 }
 
-console.log(process.argv[1]);
-
 class CommandsDefinition {
     static slugify(name) {
         return name.replace(/([^a-zA-Z0-9]+)/g, '-');
@@ -29,8 +27,8 @@ class CommandsDefinition {
         return description;
     }
 
-    constructor(name=process.argv[1], {description, example}={}) {
-        this.name = name;
+    constructor(priorname=process.argv[1], {name=process.argv[1], description, example}={}) {
+        this.name = priorname || name;
         this.description = description;
         this.example = example;
 
