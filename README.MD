@@ -92,7 +92,7 @@ try {
 }
 ```
 
-## Output with `node script.js` :
+### Output with `node script.js` :
 ```
 option: '--required' is required
 
