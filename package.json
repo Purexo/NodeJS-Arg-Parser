@@ -1,11 +1,11 @@
 {
-  "name": "arguments",
-  "version": "1.0.0",
-  "description": "",
+  "name": "simple-arg-parser",
+  "version": "0.1.0",
+  "description": "simple node cli arguments parser",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"no test specified\" && exit 0"
   },
-  "author": "",
+  "author": "Purexo",
   "license": "ISC"
 }

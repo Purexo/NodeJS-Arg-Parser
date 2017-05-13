@@ -2,6 +2,14 @@ function throwNotOptional(param) {
     throw new Error(`param: ${param} is not optional`)
 }
 
+class ParseError extends Error {}
+class RequiredError extends ParseError {}
+class RequiredOptionError extends RequiredError {}
+class RequiredArgumentError extends RequiredError {}
+class OptionError extends ParseError {}
+class UnsupportedOptionError extends OptionError {}
+class NeedValueOptionError extends OptionError {}
+
 class CommandsDefinition {
     static slugify(name) {
         return name.replace(/([^a-zA-Z0-9]+)/g, '-');
@@ -27,11 +35,13 @@ class CommandsDefinition {
         return description;
     }
 
-    constructor(priorname=process.argv[1], {name=process.argv[1], description, example, examples=[]}={}) {
-        this.name = priorname || name;
+    constructor({name=process.argv[1], description, example, examples=[]}={}) {
+        this.name = name || throwNotOptional('name');
         this.description = description;
-        this.example = example;
         this.examples = examples;
+        if (example) {
+            this.examples.unshift(example)
+        }
 
         this.arguments = new Map();
 
@@ -61,20 +71,61 @@ class CommandsDefinition {
         return this;
     }
 
+    _getRequiredArgumentsText() {
+        return [...this.arguments.values()]
+            .filter(({optional}) => !optional)
+            .map(({name}) => `<${name}>`)
+            .concat(
+                [...this.arguments.values()]
+                    .filter(({optional}) => optional)
+                    .map(({name}) => `[<${name}>]`)
+            )
+            .join(' ');
+    }
+
+    _getOptionsText() {
+        return [...this.options.values()]
+            .sort(({optional: oa}, {optional: ob}) => ((oa ? 1 : 0) - (ob ? 1 : 0)))
+            .map(({name, optional, flag, short}) => {
+                if (flag) {
+                    return `[${short ? `-${short}, `: ''}--${name}]`;
+                }
+
+                if (optional) {
+                    return `[${short ? `-${short}, `: ''}--${name} VALUE]`;
+                }
+                
+                return `--${name} VALUE`;
+            })
+            .join(' ');
+    }
+
+    _getExamplesText() {
+        if (this.examples.length === 0) {
+            return '\n  No Example Provided';
+        }
+
+        return this.examples.join('\n  ');
+    }
+
     get usage() {
         let usage = `Script : ${this.name}` + '\n';
         usage += `Description :` + '\n';
         usage += `  ${this.description || 'No Description Provided'}` + '\n';
 
-        usage += '\nOptions :';
+        usage += `\nUsage :` + '\n';
+        const optiontext = this._getOptionsText();
+        const argumenttext = this._getRequiredArgumentsText();
+        usage += `  $ ${this.name}${optiontext !== '' ? ` ${optiontext}` : ''}${argumenttext !== '' ? ` ${argumenttext}` : ''}`;
+
+        usage += '\n\nOptions :';
         usage = [...this.options.values()].reduce((prev, option) => prev + '\n  ' + CommandsDefinition.generateOptionDescription(option), usage);
 
         usage += '\n\nArguments :';
         usage = [...this.arguments.values()].reduce((prev, argument) => prev + '\n  ' + CommandsDefinition.generateArgumentDescription(argument), usage);
 
         usage += '\n\nExamples :\n';
-        usage += `  ${this.example || 'No Example Provided'}`;
-        usage += this.examples.reduce((prev, example) => prev + '\n  ' + example, usage);
+        usage += `  ${this._getExamplesText()}`;
 
         return usage;
     }
@@ -106,20 +157,20 @@ class CommandsDefinition {
     }
 
     _checkAllRequired(result) {
-        let errname;
-        const each = ({optional}, key) => {
+        if (result.get('help')) return;
+        
+        this.options.forEach(({optional}, key) => {
             if (!optional && !result.has(key))
-                throw new Error(`${errname}: '${key}' is required`);
-        };
-
-        errname = 'option';
-        this.options.forEach(each);
-
-        errname = 'argument';
-        this.arguments.forEach(each);
+                throw new RequiredOptionError(`option: '--${key}' is required`);
+        });
+        
+        this.arguments.forEach(({optional}, key) => {
+            if (!optional && !result.has(key))
+                throw new RequiredArgumentError(`argument: '<${key}>' is required`);
+        });
     }
 
-    process(args = process.argv.slice(2)) {
+    _process(args) {
         const result = this._applyDefault();
         const argumentsKeys = [...this.arguments.keys()];
         const rest = [];
@@ -134,18 +185,18 @@ class CommandsDefinition {
             if (!isArgument) {
                 const argname = this._getOptionName(arg, isOption);
 
-                if (!this.options.has(argname))
-                    throw new Error(`option: '${arg}, ${argname}' is not supported`);
+                if (!options.has(argname))
+                    throw new UnsupportedOptionError(`option: '${arg}' is not supported`);
                 
                 const option = options.get(argname);
 
                 if (option.flag) {
-                    result.set(argname, true);
+                    result.set(option.name, true);
                 } else {
                     const next = args.shift();
 
                     if (!next)
-                        throw new Error(`option: '${arg}, ${argname}' is not a flag and need a value`);
+                        throw new NeedValueOptionError(`option: '${arg}, ${option.name}' is not a flag and need a value`);
 
                     result.set(argname, next);
                 }
@@ -162,7 +213,16 @@ class CommandsDefinition {
 
         this._checkAllRequired(result);
 
-        return {params: result, rest};
+        result.rest = rest;
+        return result;
+    }
+
+    process(args = process.argv.slice(2)) {
+        try {
+            return this._process(args)
+        } catch (e) {
+            throw new e.constructor(`${e.message}${'\n\n'}${this.usage}`);
+        }
     }
 }
 
