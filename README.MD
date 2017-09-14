@@ -74,6 +74,7 @@ const cd = new CommandsDefinition({
 // or use an option like a flag but no value given
 
 try {
+    // cd.process can take an argument : array of string, if not provided process.argv.slice(2) will be used
     const inputs = cd.process();
 
     if (inputs.get('help')) {
@@ -188,7 +189,7 @@ class CommandsDefinition {
 
     get usage() : string {}
 
-    process() : Map + rest: string[] {}
+    process(args?: string[]) : Map + rest: string[] {}
 }
 ```
 
