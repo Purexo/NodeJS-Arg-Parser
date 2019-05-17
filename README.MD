@@ -4,7 +4,7 @@ Parsing commands line arguments have always been an annoying task. With this lit
 
 # Installation
 ```
-npm install simple-arg-parser
+npm install Purexo/NodeJS-Arg-Parser
 ```
 
 # Example
